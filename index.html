@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mitolyn - Cellular Energy Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Hide overflow for bubble animations */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .quiz-option {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        .quiz-option:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .option-pressed {
+            transform: scale(0.97);
+            transition: transform 0.1s ease-in;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .scale-in-center {
+            animation: scaleInCenter 0.3s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+        }
+        @keyframes scaleInCenter {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .jello-horizontal {
+            animation: jello-horizontal 0.9s both;
+        }
+        @keyframes jello-horizontal {
+            0% { transform: scale3d(1, 1, 1); }
+            30% { transform: scale3d(1.25, 0.75, 1); }
+            40% { transform: scale3d(0.75, 1.25, 1); }
+            50% { transform: scale3d(1.15, 0.85, 1); }
+            65% { transform: scale3d(0.95, 1.05, 1); }
+            75% { transform: scale3d(1.05, 0.95, 1); }
+            100% { transform: scale3d(1, 1, 1); }
+        }
+        .text-focus-in {
+            animation: text-focus-in 0.8s cubic-bezier(0.550, 0.085, 0.680, 0.530) both;
+        }
+        @keyframes text-focus-in {
+            0% {
+                filter: blur(12px);
+                opacity: 0;
+            }
+            100% {
+                filter: blur(0px);
+                opacity: 1;
+            }
+        }
+
+        /* Bubble Animation Styles */
+        .bubble-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .bubble {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.15); /* Softer white for new background */
+            border-radius: 50%;
+            filter: blur(8px); /* Blurry effect */
+            animation: floatUp 15s infinite ease-in-out;
+            opacity: 0; /* Start invisible */
+        }
+        @keyframes floatUp {
+            0% {
+                transform: translateY(100vh) translateX(0);
+                opacity: 0;
+            }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% {
+                transform: translateY(-10vh) translateX(var(--float-offset));
+                opacity: 0;
+            }
+        }
+
+        /* Gradient Text for "Great News!" */
+        .gradient-text {
+            background: linear-gradient(to right, #60A5FA, #818CF8, #60A5FA); /* blue-400, indigo-400 */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% auto;
+            animation: shine 3s linear infinite;
+        }
+
+        @keyframes shine {
+            to {
+                background-position: 200% center;
+            }
+        }
+
+        /* Spinner for Analyzing Screen */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #60A5FA; /* Blue */
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .checkmark {
+            display: inline-block;
+            transform: rotate(45deg);
+            height: 12px;
+            width: 6px;
+            border-bottom: 3px solid #34D399;
+            border-right: 3px solid #34D399;
+            margin-right: 8px;
+            opacity: 0;
+            animation: fadeInCheck 0.5s ease-in-out forwards;
+        }
+        @keyframes fadeInCheck {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 antialiased">
+    <div class="bubble-container"></div> <!-- Container for floating bubbles -->
+    <div class="min-h-screen flex flex-col items-center justify-center p-4 relative z-10">
+            
+        <div id="quiz-container" class="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 sm:p-10 text-center relative overflow-hidden">
+            
+            <!-- Initial Welcome Screen -->
+            <div id="start-screen" class="fade-in">
+                <h1 class="text-3xl sm:text-5xl font-extrabold text-gray-800 mb-2 text-focus-in">Unlock Youthful Energy & A Slimmer You</h1>
+                <p class="text-gray-600 text-lg mb-6">Tired of feeling sluggish and battling stubborn fat? This 30-second quiz reveals the #1 reason why.</p>
+                <button id="start-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-10 rounded-full text-xl transition duration-300 transform hover:scale-105">Find My Solution</button>
+                <p class="text-xs text-gray-400 mt-4">Discover how to revitalize your body from the inside out.</p>
+            </div>
+
+            <!-- Quiz Questions Area -->
+            <div id="quiz-screen" class="hidden">
+                <div id="progress-bar-container" class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+                    <div id="progress-bar" class="bg-blue-500 h-2.5 rounded-full transition-all duration-500 ease-out" style="width: 0%;"></div>
+                </div>
+                <h2 id="question-text" class="text-2xl sm:text-3xl font-bold text-gray-800 mb-8 scale-in-center"></h2>
+                <div id="options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Options will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- Analyzing Screen -->
+            <div id="analyzing-screen" class="hidden">
+                <div class="fade-in">
+                    <div class="loader"></div>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-gray-700 mb-4">Analyzing Your Profile...</h2>
+                    <div id="analyzing-steps" class="text-left max-w-sm mx-auto space-y-2">
+                        <!-- Dynamic analysis steps will appear here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div id="results-screen" class="hidden">
+                <div class="fade-in">
+                    <h2 class="text-3xl sm:text-4xl font-extrabold gradient-text mb-4">It's Confirmed!</h2>
+                    <p class="text-xl text-gray-700 mb-4">Your profile is a perfect match for the cellular-revitalizing power of <strong>Mitolyn™</strong>.</p>
+                    <p class="text-gray-600 mb-6">Here's what this means for you:</p>
+                    
+                    <ul class="text-left max-w-md mx-auto space-y-3 mb-8">
+                        <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><span><strong>Boosts 'Youth-Extending' Mitochondria</strong> to help you feel years younger.</span></li>
+                        <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><span><strong>Helps Your Body Burn Stubborn Fat for Energy,</strong> even from problem areas.</span></li>
+                        <li class="flex items-start"><span class="text-green-500 mr-2">✓</span><span><strong>Sharpens Mental Clarity & Focus,</strong> sweeping away brain fog.</span></li>
+                    </ul>
+                    
+                    <div id="timer-container" class="mb-6">
+                        <p class="text-red-500 text-lg font-bold mb-2 jello-horizontal">Your special offer expires in <span id="countdown" class="text-2xl">05:00</span>!</p>
+                    </div>
+
+                    <a href="https://mitolyn.com/science/?affiliate=scale236" target="_blank" class="block w-full max-w-md mx-auto bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-8 rounded-full text-2xl transition duration-300 transform hover:scale-105 animate-pulse">
+                        Watch the Video
+                    </a>
+                    <p class="text-sm text-gray-500 mt-4">Discover the science behind your results!</p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-white text-center mt-8 text-xs relative z-10 opacity-75">
+            <p>Results may vary from person to person.</p>
+            <p>&copy; 2025 Cellular Health Solutions. All Rights Reserved.</p>
+        </footer>
+
+    </div>
+
+    <audio id="click-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-sci-fi-click-1143.mp3" preload="auto"></audio>
+    <audio id="success-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-notification-alert-bell-1188.mp3" preload="auto"></audio>
+
+
+    <script>
+        const startBtn = document.getElementById('start-btn');
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        const analyzingScreen = document.getElementById('analyzing-screen');
+        
+        const progressBar = document.getElementById('progress-bar');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const countdownElement = document.getElementById('countdown');
+
+        const clickSound = document.getElementById('click-sound');
+        const successSound = document.getElementById('success-sound');
+
+        let currentQuestionIndex = 0;
+        let timerInterval;
+        let isAudioInitialized = false;
+
+        const quizQuestions = [
+            {
+                question: "How does your energy hold up throughout the day?",
+                options: ["😴 I crash often", "🎢 It's up and down", "👍 Mostly steady", "⚡️ I'm always on"]
+            },
+            {
+                question: "If you could wave a magic wand, what would you fix first?",
+                options: ["🔥 Stubborn body fat", "🧠 Annoying brain fog", "⏳ Signs of aging", "✨ All of the above!"]
+            },
+            {
+                question: "Many health solutions fail. What have you tried?",
+                options: ["🥗 Diets that didn't last", "💊 Supplements with no effect", "🤷‍♀️ I'm new to this", "🤔 Just exploring options"]
+            },
+            {
+                question: "How important is a science-backed formula to you?",
+                options: ["🔬 Absolutely critical", "✅ Very important", "🌿 I prefer natural", "🧐 I'm open to anything"]
+            }
+        ];
+
+        function initAudio() {
+            if (isAudioInitialized) return;
+            clickSound.load();
+            successSound.load();
+            isAudioInitialized = true;
+        }
+
+        startBtn.addEventListener('click', () => {
+            initAudio(); // Initialize audio on the first user interaction
+            playSound(clickSound);
+            startScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            displayQuestion();
+        });
+
+        function displayQuestion() {
+            if (currentQuestionIndex < quizQuestions.length) {
+                const question = quizQuestions[currentQuestionIndex];
+                
+                questionText.classList.remove('scale-in-center');
+                void questionText.offsetWidth; // Trigger reflow
+                questionText.textContent = question.question;
+                questionText.classList.add('scale-in-center');
+
+                optionsContainer.innerHTML = '';
+                
+                question.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.className = 'quiz-option bg-blue-100 text-blue-800 font-semibold p-4 rounded-lg border-2 border-blue-200 hover:bg-blue-500 hover:text-white hover:border-blue-500';
+                    button.addEventListener('click', handleOptionClick);
+                    optionsContainer.appendChild(button);
+                });
+
+                const progress = ((currentQuestionIndex + 1) / quizQuestions.length) * 100;
+                progressBar.style.width = `${progress}%`;
+                
+            } else {
+                showResults();
+            }
+        }
+
+        function handleOptionClick(e) {
+            playSound(clickSound);
+
+            const clickedButton = e.target;
+            clickedButton.classList.add('option-pressed');
+            setTimeout(() => {
+                clickedButton.classList.remove('option-pressed');
+                currentQuestionIndex++;
+                displayQuestion();
+            }, 150);
+        }
+
+        function showResults() {
+            quizScreen.classList.add('hidden');
+            analyzingScreen.classList.remove('hidden');
+            startAnalyzingAnimation();
+            
+            setTimeout(() => {
+                analyzingScreen.classList.add('hidden');
+                resultsScreen.classList.remove('hidden');
+                playSound(successSound);
+                startCountdown(300); // Start 5-minute timer (300 seconds)
+            }, 4500); // Extended for new animation
+        }
+
+        function startCountdown(duration) {
+            let timer = duration;
+            let minutes, seconds;
+            timerInterval = setInterval(() => {
+                minutes = parseInt(timer / 60, 10);
+                seconds = parseInt(timer % 60, 10);
+
+                minutes = minutes < 10 ? "0" + minutes : minutes;
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+
+                countdownElement.textContent = minutes + ":" + seconds;
+
+                if (--timer < 0) {
+                    clearInterval(timerInterval);
+                    countdownElement.textContent = "EXPIRED!";
+                }
+            }, 1000);
+        }
+
+        function playSound(sound) {
+            if (!isAudioInitialized) return;
+            sound.currentTime = 0;
+            const promise = sound.play();
+            if (promise !== undefined) {
+                promise.catch(error => {
+                    console.warn("Audio playback failed. User interaction might be required.", error);
+                });
+            }
+        }
+
+        const analyzingStepsContainer = document.getElementById('analyzing-steps');
+        const analyzingSteps = [
+            "Cross-referencing your goals...",
+            "Checking metabolic markers...",
+            "Identifying factors for mitochondrial slowdown...",
+            "We've found a potential solution!"
+        ];
+
+        function startAnalyzingAnimation() {
+            analyzingStepsContainer.innerHTML = '';
+            let delay = 0;
+            analyzingSteps.forEach((stepText, index) => {
+                setTimeout(() => {
+                    const stepElement = document.createElement('p');
+                    stepElement.className = 'text-gray-600';
+                    stepElement.innerHTML = `<span class="checkmark" style="animation-delay: ${index * 0.2}s"></span>${stepText}`;
+                    analyzingStepsContainer.appendChild(stepElement);
+                }, delay);
+                delay += 1000;
+            });
+        }
+
+
+        const bubbleContainer = document.querySelector('.bubble-container');
+        function createBubble() {
+            const bubble = document.createElement('div');
+            bubble.classList.add('bubble');
+            const size = Math.random() * 80 + 20;
+            bubble.style.width = `${size}px`;
+            bubble.style.height = `${size}px`;
+            bubble.style.left = `${Math.random() * 100}vw`;
+            bubble.style.animationDuration = `${Math.random() * 10 + 10}s`;
+            bubble.style.animationDelay = `${Math.random() * 5}s`;
+            bubble.style.setProperty('--float-offset', `${(Math.random() - 0.5) * 50}px`);
+            bubbleContainer.appendChild(bubble);
+
+            bubble.addEventListener('animationend', () => {
+                bubble.remove();
+                createBubble();
+            });
+        }
+
+        for (let i = 0; i < 15; i++) {
+            createBubble();
+        }
+    </script>
+</body>
+</html>
+
